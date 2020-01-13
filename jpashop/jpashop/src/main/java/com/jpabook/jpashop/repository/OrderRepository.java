@@ -4,8 +4,10 @@ import java.util.List;
 
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
+import javax.persistence.TypedQuery;
 
 import org.springframework.stereotype.Repository;
+import org.springframework.util.StringUtils;
 
 import com.jpabook.jpashop.domain.Order;
 
@@ -23,9 +25,41 @@ public class OrderRepository {
 		return em.find(Order.class, id);
 	}
 	
+	
 	// 동적 QueryDSL 사용
-	public List<Order> findAll(OrderSearch orderSearch){
+	public List<Order> find(OrderSearch orderSearch) { 
+		String jpql = "select o From Order o join o.member m"; 
+		boolean isFirstCondition = true;
+		// 주문 상태 검색 
+		if (orderSearch.getOrderStatus() != null) {
+			if (isFirstCondition) {
+				jpql += " where";
+				isFirstCondition = false;
+			} else {
+				jpql += " and";
+			}
+			jpql += " o.status = :status";
+		}
 		
-		return null;
+		// 회원 이름 검색
+		if (StringUtils.hasText(orderSearch.getMemberName())) {
+			if (isFirstCondition) {
+				jpql += " where";
+				isFirstCondition = false;
+			} else {
+				jpql += " and";
+			}
+			jpql += " m.name like :name";
+		}
+		TypedQuery<Order> query = em.createQuery(jpql, Order.class).setMaxResults(1000);
+		
+		if (orderSearch.getOrderStatus() != null) {
+			query = query.setParameter("status", orderSearch.getOrderStatus());
+		}
+		if (StringUtils.hasText(orderSearch.getMemberName())) {
+			query = query.setParameter("name", orderSearch.getMemberName());
+		}
+	    return query.getResultList(); 
 	}
+
 }
